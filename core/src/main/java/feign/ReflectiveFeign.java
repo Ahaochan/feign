@@ -46,10 +46,13 @@ public class ReflectiveFeign extends Feign {
   @SuppressWarnings("unchecked")
   @Override
   public <T> T newInstance(Target<T> target) {
+    // 每个方法名称生成对应的SynchronousMethodHandler(异步化的方法代理处理组件)
     Map<String, MethodHandler> nameToHandler = targetToHandlersByName.apply(target);
+    // 每个方法映射对应的SynchronousMethodHandler(异步化的方法代理处理组件)
     Map<Method, MethodHandler> methodToHandler = new LinkedHashMap<Method, MethodHandler>();
     List<DefaultMethodHandler> defaultMethodHandlers = new LinkedList<DefaultMethodHandler>();
 
+    // 遍历@FeignClient修饰的接口的所有方法
     for (Method method : target.type().getMethods()) {
       if (method.getDeclaringClass() == Object.class) {
         continue;
@@ -58,9 +61,12 @@ public class ReflectiveFeign extends Feign {
         defaultMethodHandlers.add(handler);
         methodToHandler.put(method, handler);
       } else {
+        // 默认走这里
+        // 将@FeignClient修饰的接口的每个方法, 加上nameToHandler中存放的SynchronousMethodHandler(异步化的方法代理处理组件)
         methodToHandler.put(method, nameToHandler.get(Feign.configKey(target.type(), method)));
       }
     }
+    // 创建JDK动态代理, 默认使用 InvocationHandlerFactory.Default(), 也就是下面的FeignInvocationHandler
     InvocationHandler handler = factory.create(target, methodToHandler);
     T proxy = (T) Proxy.newProxyInstance(target.type().getClassLoader(),
         new Class<?>[] {target.type()}, handler);
@@ -148,6 +154,8 @@ public class ReflectiveFeign extends Feign {
     }
 
     public Map<String, MethodHandler> apply(Target target) {
+      // 1. 默认使用SpringMvcContract, 这里的type就是@FeignClient修饰的接口的Class对象
+      //    解析完接口里的方法和参数上的@RequestMapping、@RequestParam等注解
       List<MethodMetadata> metadata = contract.parseAndValidateMetadata(target.type());
       Map<String, MethodHandler> result = new LinkedHashMap<String, MethodHandler>();
       for (MethodMetadata md : metadata) {
@@ -165,6 +173,7 @@ public class ReflectiveFeign extends Feign {
             throw new IllegalStateException(md.configKey() + " is not a method handled by feign");
           });
         } else {
+          // 这里根据方法的唯一标识, 去创建SynchronousMethodHandler实例, 内部去处理请求逻辑
           result.put(md.configKey(),
               factory.create(target, md, buildTemplate, options, decoder, errorDecoder));
         }

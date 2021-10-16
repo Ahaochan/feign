@@ -77,6 +77,7 @@ public abstract class Feign {
     if (method.getParameterTypes().length > 0) {
       builder.deleteCharAt(builder.length() - 1);
     }
+    // 对这个方法生成唯一标识, 比如 ServiceAFeignClient#methodA(String,String)
     return builder.append(')').toString();
   }
 

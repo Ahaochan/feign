@@ -43,6 +43,7 @@ public interface Contract {
    */
   List<MethodMetadata> parseAndValidateMetadata(Class<?> targetType);
 
+  // BaseContract是SpringMvcContract的父类
   abstract class BaseContract implements Contract {
 
     /**
@@ -51,17 +52,21 @@ public interface Contract {
      */
     @Override
     public List<MethodMetadata> parseAndValidateMetadata(Class<?> targetType) {
+      // 1. 这里的targetType就是@FeignClient修饰的接口的Class对象
       checkState(targetType.getTypeParameters().length == 0, "Parameterized types unsupported: %s",
           targetType.getSimpleName());
       checkState(targetType.getInterfaces().length <= 1, "Only single inheritance supported: %s",
           targetType.getSimpleName());
       final Map<String, MethodMetadata> result = new LinkedHashMap<String, MethodMetadata>();
+      // 2. 反射, 遍历这个接口的所有Method对象
       for (final Method method : targetType.getMethods()) {
+        // 2.1. 过滤掉Object类里的方法, 过滤掉static修饰的方法, 过滤掉接口的默认方法
         if (method.getDeclaringClass() == Object.class ||
             (method.getModifiers() & Modifier.STATIC) != 0 ||
             Util.isDefault(method)) {
           continue;
         }
+        // 2.2. 自己提供默认实现, SpringMvcContract也提供了扩展实现, 用于获取创建动态代理用的相关元数据
         final MethodMetadata metadata = parseAndValidateMetadata(targetType, method);
         if (result.containsKey(metadata.configKey())) {
           MethodMetadata existingMetadata = result.get(metadata.configKey());
@@ -73,6 +78,7 @@ public interface Contract {
           }
           continue;
         }
+        // 2.3. 加入结果集
         result.put(metadata.configKey(), metadata);
       }
       return new ArrayList<>(result.values());
@@ -90,23 +96,31 @@ public interface Contract {
      * Called indirectly by {@link #parseAndValidateMetadata(Class)}.
      */
     protected MethodMetadata parseAndValidateMetadata(Class<?> targetType, Method method) {
+      // 这里的targetType就是@FeignClient修饰的接口的Class对象, Method就是这个接口里的方法对象
       final MethodMetadata data = new MethodMetadata();
       data.targetType(targetType);
       data.method(method);
       data.returnType(
           Types.resolve(targetType, targetType, method.getGenericReturnType()));
+      // 对这个方法生成唯一标识, 比如 ServiceAFeignClient#methodA(String,String)
       data.configKey(Feign.configKey(targetType, method));
       if (AlwaysEncodeBodyContract.class.isAssignableFrom(this.getClass())) {
+        // 使用的是SpringMvcContract, 这里必然是false
         data.alwaysEncodeBody(true);
       }
 
       if (targetType.getInterfaces().length == 1) {
+        // 获取当前接口extends的唯一一个接口Class对象, 交给子类SpringMvcContract实现
+        // 解析接口Class对象上的@RequestMapping注解, 注入到RequestTemplate中
         processAnnotationOnClass(data, targetType.getInterfaces()[0]);
       }
+      // 获取当前接口Class对象, 交给子类SpringMvcContract实现
+      // 解析接口Class对象上的@RequestMapping注解, 注入到RequestTemplate中, 覆盖上面的配置
       processAnnotationOnClass(data, targetType);
 
-
+      // 获取当前方法上的所有注解Annotation对象, 交给子类SpringMvcContract实现
       for (final Annotation methodAnnotation : method.getAnnotations()) {
+        // SpringMvcContract内主要是解析Method对象上的@RequestMapping注解, 注入到RequestTemplate中
         processAnnotationOnMethod(data, methodAnnotation, method);
       }
       if (data.isIgnored()) {
@@ -115,23 +129,31 @@ public interface Contract {
       checkState(data.template().method() != null,
           "Method %s not annotated with HTTP method type (ex. GET, POST)%s",
           data.configKey(), data.warnings());
+      // 获取方法的参数类型
       final Class<?>[] parameterTypes = method.getParameterTypes();
+      // 获取方法的参数类型, 解析带泛型的参数, 和parameterTypes长度保持一致
       final Type[] genericParameterTypes = method.getGenericParameterTypes();
 
+      // 获取每个参数上的注解数组
       final Annotation[][] parameterAnnotations = method.getParameterAnnotations();
       final int count = parameterAnnotations.length;
+      // 遍历每个参数
       for (int i = 0; i < count; i++) {
         boolean isHttpAnnotation = false;
+        // 处理@RequestParam等相关http注解, 交给子类SpringMvcContract实现
         if (parameterAnnotations[i] != null) {
           isHttpAnnotation = processAnnotationsOnParameter(data, parameterAnnotations[i], i);
         }
 
+        // 如果处理过了, 就忽略这个参数
         if (isHttpAnnotation) {
           data.ignoreParamater(i);
         }
 
+        // 处理URI参数
         if (parameterTypes[i] == URI.class) {
           data.urlIndex(i);
+        // 如果没有被http注解修饰, 并且也不是Request.Options参数, 那就是请求体body参数
         } else if (!isHttpAnnotation && parameterTypes[i] != Request.Options.class) {
           if (data.isAlreadyProcessed(i)) {
             checkState(data.formParams().isEmpty() || data.bodyIndex() == null,
@@ -148,11 +170,13 @@ public interface Contract {
         }
       }
 
+      // SpringMvcContract默认为false
       if (data.headerMapIndex() != null) {
         checkMapString("HeaderMap", parameterTypes[data.headerMapIndex()],
             genericParameterTypes[data.headerMapIndex()]);
       }
 
+      // SpringMvcContract默认为false
       if (data.queryMapIndex() != null) {
         if (Map.class.isAssignableFrom(parameterTypes[data.queryMapIndex()])) {
           checkMapKeys("QueryMap", genericParameterTypes[data.queryMapIndex()]);
