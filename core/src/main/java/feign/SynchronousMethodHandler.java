@@ -81,17 +81,22 @@ final class SynchronousMethodHandler implements MethodHandler {
 
   @Override
   public Object invoke(Object[] argv) throws Throwable {
+    // 从MethodMetadata复制一个RequestTemplate, 并将传入的参数值设置进去
     RequestTemplate template = buildTemplateFromArgs.create(argv);
     Options options = findOptions(argv);
     Retryer retryer = this.retryer.clone();
+    // while循环是为了重试
     while (true) {
       try {
+        // 真正去执行请求并解析响应体的方法
         return executeAndDecode(template, options);
       } catch (RetryableException e) {
         try {
+          // 默认的NEVER_RETRY直接抛出RetryableException
           retryer.continueOrPropagate(e);
         } catch (RetryableException th) {
           Throwable cause = th.getCause();
+          // 默认是false, propagationPolicy为NONE
           if (propagationPolicy == UNWRAP && cause != null) {
             throw cause;
           } else {
@@ -107,6 +112,7 @@ final class SynchronousMethodHandler implements MethodHandler {
   }
 
   Object executeAndDecode(RequestTemplate template, Options options) throws Throwable {
+    // 1. 通过RequestTemplate模板, 创建请求体Request
     Request request = targetRequest(template);
 
     if (logLevel != Logger.Level.NONE) {

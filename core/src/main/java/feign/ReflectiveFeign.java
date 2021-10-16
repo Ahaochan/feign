@@ -217,8 +217,10 @@ public class ReflectiveFeign extends Feign {
 
     @Override
     public RequestTemplate create(Object[] argv) {
+      // clone一个RequestTemplate
       RequestTemplate mutable = RequestTemplate.from(metadata.template());
       mutable.feignTarget(target);
+      // BaseContract会解析URI参数类型, 一般是没有的
       if (metadata.urlIndex() != null) {
         int urlIndex = metadata.urlIndex();
         checkArgument(argv[urlIndex] != null, "URI parameter %s was null", urlIndex);
