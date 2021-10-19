@@ -139,7 +139,9 @@ final class SynchronousMethodHandler implements MethodHandler {
     long elapsedTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
 
 
+    // FeignClientsConfiguration初始化的new OptionalDecoder(new ResponseEntityDecoder(new SpringDecoder(this.messageConverters)));
     if (decoder != null)
+      // returnType是接口的方法的返回体
       return decoder.decode(response, metadata.returnType());
 
     CompletableFuture<Object> resultFuture = new CompletableFuture<>();
