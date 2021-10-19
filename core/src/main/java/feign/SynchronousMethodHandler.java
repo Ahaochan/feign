@@ -112,7 +112,7 @@ final class SynchronousMethodHandler implements MethodHandler {
   }
 
   Object executeAndDecode(RequestTemplate template, Options options) throws Throwable {
-    // 1. 通过RequestTemplate模板, 创建请求体Request
+    // 1. 通过RequestTemplate模板, 通过HardCodedTarget创建Request请求体, 从/hello转为http://serviceA/hello
     Request request = targetRequest(template);
 
     if (logLevel != Logger.Level.NONE) {
@@ -122,6 +122,8 @@ final class SynchronousMethodHandler implements MethodHandler {
     Response response;
     long start = System.nanoTime();
     try {
+      // 2.2.x版本, 从FeignRibbonClientAutoConfiguration导入HttpClientFeignLoadBalancedConfiguration,
+      //           加载LoadBalancerFeignClient, 最新代码已被删除, 猜测替换为RibbonClient
       response = client.execute(request, options);
       // ensure the request is set. TODO: remove in Feign 12
       response = response.toBuilder()
@@ -163,9 +165,11 @@ final class SynchronousMethodHandler implements MethodHandler {
   }
 
   Request targetRequest(RequestTemplate template) {
+    // 遍历请求拦截器, 处理RequestTemplate
     for (RequestInterceptor interceptor : requestInterceptors) {
       interceptor.apply(template);
     }
+    // 通过HardCodedTarget创建Request请求体, 从/hello转为http://serviceA/hello
     return target.apply(template);
   }
 

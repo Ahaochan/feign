@@ -72,11 +72,15 @@ public class RibbonClient implements Client {
   @Override
   public Response execute(Request request, Request.Options options) throws IOException {
     try {
+      // 从url解析服务名
       URI asUri = URI.create(request.url());
       String clientName = asUri.getHost();
+      // 从url移除服务名, 获取uri
       URI uriWithoutHost = cleanUrl(request.url(), clientName);
+      // 这个delegate就是Client.Default的实例
       LBClient.RibbonRequest ribbonRequest =
           new LBClient.RibbonRequest(delegate, request, uriWithoutHost);
+      // 这里根据服务名clientName, 去获取服务实例列表, 然后再去负载均衡
       return lbClient(clientName).executeWithLoadBalancer(ribbonRequest,
           new FeignOptionsClientConfig(options)).toResponse();
     } catch (ClientException e) {
