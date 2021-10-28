@@ -53,6 +53,7 @@ public interface Retryer extends Cloneable {
     }
 
     public void continueOrPropagate(RetryableException e) {
+      // 超过重试次数, 就不再重试了
       if (attempt++ >= maxAttempts) {
         throw e;
       }
@@ -70,6 +71,7 @@ public interface Retryer extends Cloneable {
         interval = nextMaxInterval();
       }
       try {
+        // 重试会休眠, 每次休眠时间是不一样的
         Thread.sleep(interval);
       } catch (InterruptedException ignored) {
         Thread.currentThread().interrupt();

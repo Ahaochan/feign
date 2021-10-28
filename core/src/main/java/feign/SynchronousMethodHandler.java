@@ -93,6 +93,7 @@ final class SynchronousMethodHandler implements MethodHandler {
       } catch (RetryableException e) {
         try {
           // 默认的NEVER_RETRY直接抛出RetryableException
+          // 需要自己的配置类里使用@Bean创建重试类
           retryer.continueOrPropagate(e);
         } catch (RetryableException th) {
           Throwable cause = th.getCause();
@@ -106,6 +107,7 @@ final class SynchronousMethodHandler implements MethodHandler {
         if (logLevel != Logger.Level.NONE) {
           logger.logRetry(metadata.configKey(), logLevel);
         }
+        // 继续循环重试
         continue;
       }
     }
