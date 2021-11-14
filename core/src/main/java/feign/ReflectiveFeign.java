@@ -67,6 +67,7 @@ public class ReflectiveFeign extends Feign {
       }
     }
     // 创建JDK动态代理, 默认使用 InvocationHandlerFactory.Default(), 也就是下面的FeignInvocationHandler
+    // 如果使用了Hystrix, 会使用HystrixFeign创建的HystrixInvocationHandler
     InvocationHandler handler = factory.create(target, methodToHandler);
     T proxy = (T) Proxy.newProxyInstance(target.type().getClassLoader(),
         new Class<?>[] {target.type()}, handler);
