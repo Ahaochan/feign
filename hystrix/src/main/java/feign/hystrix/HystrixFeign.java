@@ -145,7 +145,7 @@ public final class HystrixFeign {
                                         Map<Method, MethodHandler> dispatch) {
           // target: 要调用的服务
           // dispatch: 接口的每个方法的Method对象, SynchronousMethodHandler
-          // setterFactory: 空
+          // setterFactory: 默认是SetterFactory.Default()
           // nullableFallbackFactory: fallback工厂, 注解的参数传进来的
           return new HystrixInvocationHandler(target, dispatch, setterFactory,
               nullableFallbackFactory);

@@ -48,8 +48,13 @@ public interface SetterFactory {
 
     @Override
     public HystrixCommand.Setter create(Target<?> target, Method method) {
+      // HardCodedTarget的name是@FeignClient标记的服务名
       String groupKey = target.name();
+      // HardCodedTarget的type是@FeignClient修饰的接口的Class对象
+      // 这里拼接生成方法的唯一标志
       String commandKey = Feign.configKey(target.type(), method);
+      // 最简单的Setter就是服务名作为groupKey, 接口拼接成的唯一标志作为commandKey
+      // 也就是一个服务一个线程池
       return HystrixCommand.Setter
           .withGroupKey(HystrixCommandGroupKey.Factory.asKey(groupKey))
           .andCommandKey(HystrixCommandKey.Factory.asKey(commandKey));

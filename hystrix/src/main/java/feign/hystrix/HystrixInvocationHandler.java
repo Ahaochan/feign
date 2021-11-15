@@ -47,6 +47,7 @@ final class HystrixInvocationHandler implements InvocationHandler {
     this.dispatch = checkNotNull(dispatch, "dispatch");
     this.fallbackFactory = fallbackFactory;
     this.fallbackMethodMap = toFallbackMethod(dispatch);
+    // 为接口的每个方法, 创建构造HystrixCommand所需的Setter
     this.setterMethodMap = toSetters(setterFactory, target, dispatch.keySet());
   }
 
