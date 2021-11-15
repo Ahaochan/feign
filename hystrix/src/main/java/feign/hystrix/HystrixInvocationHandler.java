@@ -117,12 +117,15 @@ final class HystrixInvocationHandler implements InvocationHandler {
 
           @Override
           protected Object getFallback() {
+            // 只要@FeignClient的fallback或者fallbackFactory属性不为null, 就不会进入这个if
             if (fallbackFactory == null) {
               return super.getFallback();
             }
             try {
+              // getExecutionException()获取HystrixCommand执行时的异常, 交给自定义fallback执行
               Object fallback = fallbackFactory.create(getExecutionException());
               Object result = fallbackMethodMap.get(method).invoke(fallback, args);
+              // 如果是特殊的返回体, 做特殊的操作
               if (isReturnsHystrixCommand(method)) {
                 return ((HystrixCommand) result).execute();
               } else if (isReturnsObservable(method)) {
@@ -152,7 +155,7 @@ final class HystrixInvocationHandler implements InvocationHandler {
             }
           }
         };
-
+    // 如果是特殊的返回体, 做特殊的操作
     if (Util.isDefault(method)) {
       return hystrixCommand.execute();
     } else if (isReturnsHystrixCommand(method)) {
