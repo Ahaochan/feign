@@ -159,6 +159,7 @@ final class HystrixInvocationHandler implements InvocationHandler {
     if (Util.isDefault(method)) {
       return hystrixCommand.execute();
     } else if (isReturnsHystrixCommand(method)) {
+      // 返回HystrixCommand, 由外部决定怎么执行这个HystrixCommand
       return hystrixCommand;
     } else if (isReturnsObservable(method)) {
       // Create a cold Observable
@@ -171,6 +172,7 @@ final class HystrixInvocationHandler implements InvocationHandler {
     } else if (isReturnsCompletableFuture(method)) {
       return new ObservableCompletableFuture<>(hystrixCommand);
     }
+    // 默认同步执行
     return hystrixCommand.execute();
   }
 
